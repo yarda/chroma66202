@@ -1,8 +1,7 @@
 #!/usr/bin/python
 """
 Chroma66202 real time power consumption graphing.
-
-Copyright (C) 2012 Yarda <jskarvad@redhat.com>
+Copyright (C) 2013 Yarda <jskarvad@redhat.com>
 
 Based on the code by Eli Bendersky:
 This demo demonstrates how to draw a dynamic mpl (matplotlib)

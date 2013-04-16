@@ -1,15 +1,23 @@
 PRG=chroma66202
-OBJ=$(PRG).o
-CC=gcc
-CFLAGS=-Wall -pedantic
+PRG2=pwrtest
 
-.PHONY: clean
+DESTDIR=/usr/local
+CFLAGS=-Wall
 
-$(PRG): $(OBJ)
-	$(CC) -o $(PRG) $(OBJ)
+.PHONY: all clean install
 
-$(OBJ): $(PRG).c
-	$(CC) $(CFLAGS) -c $(PRG).c -o $(OBJ) 
+all: $(PRG) $(PRG2)
+
+$(PRG): $(PRG).o
+	$(CC) -o $(PRG) $(PRG).o
+
+$(PRG2): $(PRG2).o
+	$(CC) -o $(PRG2) $(PRG2).o
+
+install: $(PRG) $(PRG2)
+	mkdir -p $(DESTDIR)/bin
+	install -p -m 0755 $(PRG) $(DESTDIR)/bin/
+	install -p -m 0755 $(PRG2) $(DESTDIR)/bin/
 
 clean:
-	rm -f *.o $(PRG)
+	rm -f $(PRG).o $(PRG2).o $(PRG) $(PRG2)

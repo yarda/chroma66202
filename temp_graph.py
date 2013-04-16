@@ -2,8 +2,7 @@
 # coding=utf-8
 """
 Watchport sensor real time temperature graphing.
-
-Copyright (C) 2012 Yarda <jskarvad@redhat.com>
+Copyright (C) 2013 Yarda <jskarvad@redhat.com>
 
 Based on the code by Eli Bendersky:
 

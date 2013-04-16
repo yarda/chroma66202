@@ -1,6 +1,6 @@
 /*
   Frontend for quering Chroma 66202 power meter through USBTMC.
-  Copyright (C) 2010 Yarda <jskarvad@redhat.com>
+  Copyright (C) 2013 Yarda <jskarvad@redhat.com>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
