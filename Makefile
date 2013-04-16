@@ -2,7 +2,8 @@ PRG=chroma66202
 PRG2=pwrtest
 
 DESTDIR=
-PREFIX=/usr/local/
+PREFIX=/usr/local
+BINDIR=$(PREFIX)/bin
 
 CFLAGS=-Wall
 
@@ -17,9 +18,9 @@ $(PRG2): $(PRG2).o
 	$(CC) -o $(PRG2) $(PRG2).o
 
 install: $(PRG) $(PRG2)
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	install -p -m 0755 $(PRG) $(DESTDIR)$(PREFIX)/bin/
-	install -p -m 0755 $(PRG2) $(DESTDIR)$(PREFIX)/bin/
+	mkdir -p $(DESTDIR)$(BINDIR)
+	install -p -m 0755 $(PRG) $(DESTDIR)$(BINDIR)/
+	install -p -m 0755 $(PRG2) $(DESTDIR)$(BINDIR)/
 
 clean:
 	rm -f $(PRG).o $(PRG2).o $(PRG) $(PRG2)
