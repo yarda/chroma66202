@@ -173,10 +173,12 @@ void help(char *argv[])
   printf("                 you can get \"range change error\" (-2 value ");
   printf("in results).\n");
   printf("                 In case of 0 integrate forever, end on SIG_TERM,");
-  printf("SIG_USR2,");
-  printf("                 output so far integrated results on SIG_USR1.");
-  printf("  -r[N]          Repeat measurement N times (default %u).\n",
+  printf("SIG_USR2,\n");
+  printf("                 output so far integrated results on SIG_USR1.\n");
+  printf("  -r[N]          Repeat measurement N times (default %u). ",
          DEFAULT_REPEAT);
+  printf("Negative values\n");
+  printf("                 means infinite repeat.\n");
   printf("  -y[T]          Delay between measurements T secs (default %u).\n",
          DEFAULT_DELAY);
   printf("  -c             Do not print CSV headers.\n");
@@ -344,8 +346,7 @@ int parse_args(int argc, char *argv[])
           snprintf(tintegrate, 4, "%u", x);
           break;
         case 'r':
-          if (sscanf(optarg, "%u%c", (unsigned int *) &repeat, &c1) != 1 ||
-              repeat <= 0)
+          if (sscanf(optarg, "%d%c", &repeat, &c1) != 1)
             return err(E_WRONGARG);
           break;
         case 'y':
@@ -540,13 +541,16 @@ void cleartrail(char *buf)
 
 int process()
 {
+  int infinite_repeat;
+
   if (finfo)
     return do_info();
 
   if (!fnocsvhead)
     printf("%s\n", header);
 
-  while (repeat--)
+  infinite_repeat = repeat < 0;
+  while (infinite_repeat || repeat--)
   {
     if (fint)
     {
