@@ -350,8 +350,7 @@ int parse_args(int argc, char *argv[])
             return err(E_WRONGARG);
           break;
         case 'y':
-          if (sscanf(optarg, "%u%c", (unsigned int *) &delay, &c1) != 1 ||
-              delay <= 0)
+          if (sscanf(optarg, "%u%c", &delay, &c1) != 1 || delay < 0)
             return err(E_WRONGARG);
           break;
         case ':':
@@ -578,7 +577,7 @@ int process()
     }
     cleartrail(buf);
     printf("%s\n", buf);
-    if (repeat)
+    if (repeat && delay)
       sleep(delay);
   }
 
