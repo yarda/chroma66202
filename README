@@ -1,1 +1,24 @@
 User space utilites for chroma66202 digital power meter.
+
+Plotting chroma66202 output live with gnuplot
+==============================================================================
+chroma66202 -cpt -r-1 -y1 | stdbuf -oL awk -F";" '{print $1,$2}' >/tmp/data
+gnuplot live.gnuplot
+==============================================================================
+
+netcat can be used to send the chroma66202 output to another server:
+==============================================================================
+Listener:
+nc -l -p 8886
+
+Sender:
+chroma66202 -cpt -r-1 -y1 | nc -w10 host 8886
+==============================================================================
+
+Listener to write received data to file /tmp/data and plot them live using gnuplot:
+Listener has to be started before sender.
+==============================================================================
+nc -l -p 8886 | stdbuf -oL awk -F";" '{print $1,$2}' >/tmp/data
+gnuplot live.gnuplot
+==============================================================================
+
