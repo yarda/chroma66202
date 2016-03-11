@@ -39,7 +39,6 @@
 #define COPYRIGHT_STRING \
 "Copyright (C) 2010 Yarda <jskarvad@redhat.com>"
 
-#define DEFAULT_LOCK "/var/lock/" PROGNAME_STRING
 #define DEFAULT_DEVICE "/dev/usbtmc0"
 #define DEFAULT_WINDOW "1.0"
 #define DEFAULT_REPEAT 1
@@ -80,19 +79,20 @@ csv_add((header), (str), ';')
   csv_add((meas), (mstr), ',');\
 }
 
-char lockfile[PATH_MAX] = DEFAULT_LOCK;
 char device[PATH_MAX] = DEFAULT_DEVICE;
 char buf[BUFSIZE] = {0};
 char timebuf[BUFSIZE] = {0};
 char header[256] = {0};
 char meas[256] = {0};
 char *mtype, *model, *serial, *firmware;
-int f, fl;
+int f;
 time_t tt;
 struct tm tm;
 
 volatile int ssigusr1 = 0;
 volatile int ssigusr2 = 0;
+// whether exclusively lock the device
+int flockdev = 1;
 int fsig = 0;
 int fint = 0;
 int finfo = 0;
@@ -146,8 +146,13 @@ void help(char *argv[])
   printf("Usage: %s [OPTIONS]\n", argv[0]);
   printf("  -dDEVICE       Specify device (default %s)\n", DEFAULT_DEVICE);
   printf("  -l             display info about connected device.\n");
-  printf("  -kLOCKFILE     Use LOCKFILE (default %s).\n",
-         DEFAULT_LOCK);
+  printf("  -k             Do not lock the device for exclusive access (not ");
+  printf("recommended).\n");
+  printf("                 It uses advisory locking through flock, thus ");
+  printf("other tools\n");
+  printf("                 non-compatible with the flock may ignore the ");
+  printf("exclusive lock\n");
+  printf("                 even if not disabled by this option.\n");
   printf("  -e             Perform reset (*RST command) before issuing \n");
   printf("                 any other command. Use in case of troubles.\n");
   printf("  -sSHUNT        Shunt range, can be: h, l, a, ");
@@ -257,7 +262,7 @@ int parse_args(int argc, char *argv[])
           version();
           return -1;
         case 'k':
-          strncpy(lockfile, optarg, PATH_MAX);
+          flockdev = 0;
           break;
         case 'd':
           strncpy(device, optarg, PATH_MAX);
@@ -448,9 +453,18 @@ int init()
 
   if ((f = open(device, O_RDWR)) == -1)
   {
-    printf("Error opening device: %s\n", strerror(errno));
+    printf("Error opening device '%s': %s\n", device, strerror(errno));
     return 0;
   }
+
+  if (flockdev)
+    if (flock(f, LOCK_EX | LOCK_NB) < 0)
+    {
+      fprintf(stderr, "Unable to obtain lock on device '%s' for exclusive "
+        "access.\n", device);
+      close(f);
+      return E_LOCK;
+    }
 
   if (fr)
   {
@@ -511,6 +525,9 @@ int init()
 void done()
 {
   c("SOUR:POW:INT 0\n");
+  if (flockdev)
+      flock(f, LOCK_UN);
+
   close(f);
 /*
   if (fsig)
@@ -597,14 +614,6 @@ int main(int argc, char *argv[])
   if (ret > 0)
     return ret;
 
-  if ((fl = creat(lockfile, 0660)) < 0)
-  {
-    fprintf(stderr, "Unable to obtain lock %s, you can try to remove it.\n",
-            lockfile);
-    return E_LOCK;
-  }
-  flock(fl, LOCK_EX);
-
   if ((ret = checkirange()))
     return ret;
 
@@ -615,7 +624,6 @@ int main(int argc, char *argv[])
   }
   else
     ret = err(E_INIT);
-  flock(fl, LOCK_UN);
 
   return ret;
 }
