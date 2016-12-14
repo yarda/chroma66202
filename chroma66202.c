@@ -180,11 +180,11 @@ void help(char *argv[])
   printf("                 In case of 0 integrate forever, end on SIG_TERM,");
   printf("SIG_USR2,\n");
   printf("                 output so far integrated results on SIG_USR1.\n");
-  printf("  -rN          Repeat measurement N times (default %u). ",
+  printf("  -rN            Repeat measurement N times (default %u). ",
          DEFAULT_REPEAT);
   printf("Negative values\n");
   printf("                 means infinite repeat.\n");
-  printf("  -yT          Delay between measurements T secs (default %u).\n",
+  printf("  -yT            Delay between measurements T secs (default %u).\n",
          DEFAULT_DELAY);
   printf("  -c             Do not print CSV headers.\n");
   printf("  --help, -h     Show this help.\n");
