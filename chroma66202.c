@@ -1,6 +1,6 @@
 /*
   Frontend for quering Chroma 66202 power meter through USBTMC.
-  Copyright (C) 2013 Yarda <jskarvad@redhat.com>
+  Copyright (C) 2010-2016 Yarda <jskarvad@redhat.com>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@
 #define PROGNAME_STRING STRING(PROGNAME)
 #define VERSION_STRING STRING(VERSION_MAJOR) "." STRING(VERSION_MINOR)
 #define COPYRIGHT_STRING \
-"Copyright (C) 2010 Yarda <jskarvad@redhat.com>"
+"Copyright (C) 2010-2016 Yarda <jskarvad@redhat.com>"
 
 #define DEFAULT_DEVICE "/dev/usbtmc0"
 #define DEFAULT_WINDOW "1.0"
@@ -180,11 +180,11 @@ void help(char *argv[])
   printf("                 In case of 0 integrate forever, end on SIG_TERM,");
   printf("SIG_USR2,\n");
   printf("                 output so far integrated results on SIG_USR1.\n");
-  printf("  -r[N]          Repeat measurement N times (default %u). ",
+  printf("  -rN          Repeat measurement N times (default %u). ",
          DEFAULT_REPEAT);
   printf("Negative values\n");
   printf("                 means infinite repeat.\n");
-  printf("  -y[T]          Delay between measurements T secs (default %u).\n",
+  printf("  -yT          Delay between measurements T secs (default %u).\n",
          DEFAULT_DELAY);
   printf("  -c             Do not print CSV headers.\n");
   printf("  --help, -h     Show this help.\n");
@@ -250,7 +250,7 @@ int parse_args(int argc, char *argv[])
   float r;
 
   while ((opt =
-          getopt_long (argc, argv, "aetld:nk:s:i::u::pw:g:r::y::chv", long_options,
+          getopt_long (argc, argv, "aetld:nk:s:i::u::pw:g:r:y:chv", long_options,
                        &option_index)) != -1)
   {
       switch (opt)
