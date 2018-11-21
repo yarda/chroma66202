@@ -112,7 +112,7 @@ char irange[5] = "0";
 char urange[5] = "AUTO";
 char *win;
 char window[6] = DEFAULT_WINDOW;
-char tintegrate[] = "0";
+char tintegrate[5] = "0";
 /*
 struct sigaction acts_sigusr1 = {0};
 struct sigaction acts_sigusr2 = {0};
@@ -348,7 +348,7 @@ int parse_args(int argc, char *argv[])
             x = 1;
           }
           tintegratei = x;
-          snprintf(tintegrate, 4, "%u", x);
+          snprintf(tintegrate, 5, "%u", x);
           break;
         case 'r':
           if (sscanf(optarg, "%d%c", &repeat, &c1) != 1)
