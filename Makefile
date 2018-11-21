@@ -12,10 +12,10 @@ CFLAGS=-Wall
 all: $(PRG) $(PRG2)
 
 $(PRG): $(PRG).o
-	$(CC) -o $(PRG) $(PRG).o
+	$(LD) $(LDFLAGS) -o $(PRG) $(PRG).o
 
 $(PRG2): $(PRG2).o
-	$(CC) -o $(PRG2) $(PRG2).o
+	$(LD) $(LDFLAGS) -o $(PRG2) $(PRG2).o
 
 install: $(PRG) $(PRG2)
 	mkdir -p $(DESTDIR)$(BINDIR)
