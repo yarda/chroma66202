@@ -104,6 +104,7 @@ int fp = 0;
 int fpf = 0;
 int ft = 0;
 int fr = 0;
+int fn = 0;
 int repeat = DEFAULT_REPEAT;
 int delay = DEFAULT_DELAY;
 int tintegratei = 0;
@@ -150,6 +151,8 @@ void help(char *argv[])
          DEFAULT_LOCK);
   printf("  -e             Perform reset (*RST command) before issuing \n");
   printf("                 any other command. Use in case of troubles.\n");
+  printf("  -n             Clear protection message before issuing any other\n");
+  printf("                 command. Use it if you get -3 as a result.\n");
   printf("  -sSHUNT        Shunt range, can be: h, l, a, ");
   printf("(default a - auto).\n");
   printf("  -i[RANGE]      Measure RMS current (in A), range can be:\n");
@@ -265,6 +268,9 @@ int parse_args(int argc, char *argv[])
           break;
         case 'e':
           fr = 1;
+          break;
+        case 'n':
+          fn = 1;
           break;
         case 'c':
           fnocsvhead = 1;
@@ -455,6 +461,15 @@ int init()
   if (fr)
   {
     if (!c("*RST\n"))
+    {
+      close(f);
+      return E_COMM;
+    }
+  }
+
+  if (fn)
+  {
+    if (!c("SOUR:PROT:CLE\r"))
     {
       close(f);
       return E_COMM;
