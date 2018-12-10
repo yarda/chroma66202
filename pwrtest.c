@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <time.h>
+#include <errno.h>
 
 #define DEV "/dev/usbtmc0"
 #define IDN "*IDN?\n"
@@ -66,7 +67,7 @@ double frq = 0.0f;
 double p = 0.0f;
 double pf = 0.0f;
 char shunt[5] = "AUTO";
-char irange[5] = "A2L";
+char irange[5] = "A8";
 char urange[5] = "AUTO";
 char window[6] = DEFAULT_WINDOW;
 char tintegrate[] = "1";
@@ -155,11 +156,13 @@ void printresults(void)
   if (compact)
   {
     printf("%lu;%f;%g\n", tt - tts, p, p * (tt - tts));
+    fflush(stdout);
   }
   else
   {
     strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt));
     printf("%s; %f; %f; %f; %f; %f\n", timebuf, u, i, frq, p, pf);
+    fflush(stdout);
   }
 }
 
@@ -201,7 +204,10 @@ int main(int argc, char *argv[])
   sigaction(SIGUSR2, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
   if (!compact)
+  {
     printf("Time; U; I; P; PF\n");
+    fflush(stdout);
+  }
 /*
   if (read(f, buf, BUFLEN - 1) < 0)
   {
@@ -259,16 +265,19 @@ int main(int argc, char *argv[])
     }
     rem.tv_sec = 1;
     rem.tv_nsec = 0;
-    ret = nanosleep(&rem, &rem);
-    while (ssigusr1 && ret < 0)
+    do
     {
+      ret = nanosleep(&rem, &rem);
+      if (ret < 0 && errno != EINTR)
+         fprintf(stderr, "error %d returned by nanosleep", ret);
+
       if (ssigusr1)
       {
         ssigusr1 = 0;
         printresults();
       }
-      ret = nanosleep(&rem, &rem);
     }
+    while (ret < 0 && errno == EINTR);
   }
   printresults();
   close(f);
