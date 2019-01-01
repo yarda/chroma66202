@@ -1,6 +1,6 @@
 /*
   Frontend for quering Chroma 66202 power meter through USBTMC.
-  Copyright (C) 2013 Yarda <jskarvad@redhat.com>
+  Copyright (C) 2010-2016 Yarda <jskarvad@redhat.com>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -37,9 +37,8 @@
 #define PROGNAME_STRING STRING(PROGNAME)
 #define VERSION_STRING STRING(VERSION_MAJOR) "." STRING(VERSION_MINOR)
 #define COPYRIGHT_STRING \
-"Copyright (C) 2010 Yarda <jskarvad@redhat.com>"
+"Copyright (C) 2010-2016 Yarda <jskarvad@redhat.com>"
 
-#define DEFAULT_LOCK "/var/lock/" PROGNAME_STRING
 #define DEFAULT_DEVICE "/dev/usbtmc0"
 #define DEFAULT_WINDOW "1.0"
 #define DEFAULT_REPEAT 1
@@ -80,19 +79,20 @@ csv_add((header), (str), ';')
   csv_add((meas), (mstr), ',');\
 }
 
-char lockfile[PATH_MAX] = DEFAULT_LOCK;
 char device[PATH_MAX] = DEFAULT_DEVICE;
 char buf[BUFSIZE] = {0};
 char timebuf[BUFSIZE] = {0};
 char header[256] = {0};
 char meas[256] = {0};
 char *mtype, *model, *serial, *firmware;
-int f, fl;
+int f;
 time_t tt;
 struct tm tm;
 
 volatile int ssigusr1 = 0;
 volatile int ssigusr2 = 0;
+// whether exclusively lock the device
+int flockdev = 1;
 int fsig = 0;
 int fint = 0;
 int finfo = 0;
@@ -113,7 +113,7 @@ char irange[5] = "0";
 char urange[5] = "AUTO";
 char *win;
 char window[6] = DEFAULT_WINDOW;
-char tintegrate[] = "0";
+char tintegrate[5] = "0";
 /*
 struct sigaction acts_sigusr1 = {0};
 struct sigaction acts_sigusr2 = {0};
@@ -147,8 +147,13 @@ void help(char *argv[])
   printf("Usage: %s [OPTIONS]\n", argv[0]);
   printf("  -dDEVICE       Specify device (default %s)\n", DEFAULT_DEVICE);
   printf("  -l             display info about connected device.\n");
-  printf("  -kLOCKFILE     Use LOCKFILE (default %s).\n",
-         DEFAULT_LOCK);
+  printf("  -k             Do not lock the device for exclusive access (not ");
+  printf("recommended).\n");
+  printf("                 It uses advisory locking through flock, thus ");
+  printf("other tools\n");
+  printf("                 non-compatible with the flock may ignore the ");
+  printf("exclusive lock\n");
+  printf("                 even if not disabled by this option.\n");
   printf("  -e             Perform reset (*RST command) before issuing \n");
   printf("                 any other command. Use in case of troubles.\n");
   printf("  -n             Clear protection message before issuing any other\n");
@@ -183,11 +188,13 @@ void help(char *argv[])
   printf("                 you can get \"range change error\" (-2 value ");
   printf("in results).\n");
   printf("                 In case of 0 integrate forever, end on SIG_TERM,");
-  printf("SIG_USR2,");
-  printf("                 output so far integrated results on SIG_USR1.");
-  printf("  -r[N]          Repeat measurement N times (default %u).\n",
+  printf("SIG_USR2,\n");
+  printf("                 output so far integrated results on SIG_USR1.\n");
+  printf("  -rN            Repeat measurement N times (default %u). ",
          DEFAULT_REPEAT);
-  printf("  -y[T]          Delay between measurements T secs (default %u).\n",
+  printf("Negative values\n");
+  printf("                 means infinite repeat.\n");
+  printf("  -yT            Delay between measurements T secs (default %u).\n",
          DEFAULT_DELAY);
   printf("  -c             Do not print CSV headers.\n");
   printf("  --help, -h     Show this help.\n");
@@ -253,7 +260,7 @@ int parse_args(int argc, char *argv[])
   float r;
 
   while ((opt =
-          getopt_long (argc, argv, "aetld:nk:s:i::u::pw:g:r::y::chv", long_options,
+          getopt_long (argc, argv, "aetld:nk:s:i::u::pw:g:r:y:chv", long_options,
                        &option_index)) != -1)
   {
       switch (opt)
@@ -265,7 +272,7 @@ int parse_args(int argc, char *argv[])
           version();
           return -1;
         case 'k':
-          strncpy(lockfile, optarg, PATH_MAX);
+          flockdev = 0;
           break;
         case 'd':
           strncpy(device, optarg, PATH_MAX);
@@ -354,16 +361,14 @@ int parse_args(int argc, char *argv[])
             x = 1;
           }
           tintegratei = x;
-          snprintf(tintegrate, 4, "%u", x);
+          snprintf(tintegrate, 5, "%u", x);
           break;
         case 'r':
-          if (sscanf(optarg, "%u%c", (unsigned int *) &repeat, &c1) != 1 ||
-              repeat <= 0)
+          if (sscanf(optarg, "%d%c", &repeat, &c1) != 1)
             return err(E_WRONGARG);
           break;
         case 'y':
-          if (sscanf(optarg, "%u%c", (unsigned int *) &delay, &c1) != 1 ||
-              delay <= 0)
+          if (sscanf(optarg, "%u%c", &delay, &c1) != 1 || delay < 0)
             return err(E_WRONGARG);
           break;
         case ':':
@@ -461,9 +466,18 @@ int init()
 
   if ((f = open(device, O_RDWR)) == -1)
   {
-    printf("Error opening device: %s\n", strerror(errno));
+    printf("Error opening device '%s': %s\n", device, strerror(errno));
     return 0;
   }
+
+  if (flockdev)
+    if (flock(f, LOCK_EX | LOCK_NB) < 0)
+    {
+      fprintf(stderr, "Unable to obtain lock on device '%s' for exclusive "
+        "access.\n", device);
+      close(f);
+      return E_LOCK;
+    }
 
   if (fr)
   {
@@ -533,6 +547,9 @@ int init()
 void done()
 {
   c("SOUR:POW:INT 0\n");
+  if (flockdev)
+      flock(f, LOCK_UN);
+
   close(f);
 /*
   if (fsig)
@@ -562,13 +579,16 @@ void cleartrail(char *buf)
 
 int process()
 {
+  int infinite_repeat;
+
   if (finfo)
     return do_info();
 
   if (!fnocsvhead)
     printf("%s\n", header);
 
-  while (repeat--)
+  infinite_repeat = repeat < 0;
+  while (infinite_repeat || repeat--)
   {
     if (fint)
     {
@@ -596,7 +616,7 @@ int process()
     }
     cleartrail(buf);
     printf("%s\n", buf);
-    if (repeat)
+    if (repeat && delay)
       sleep(delay);
   }
 
@@ -607,20 +627,14 @@ int main(int argc, char *argv[])
 {
   int ret;
 
+  // line buffering stdout
+  setvbuf(stdout, NULL, _IOLBF, 0);
   win = window;
   ret = parse_args(argc, argv);
   if (ret < 0)
     return EXIT_SUCCESS;
   if (ret > 0)
     return ret;
-
-  if ((fl = creat(lockfile, 0660)) < 0)
-  {
-    fprintf(stderr, "Unable to obtain lock %s, you can try to remove it.\n",
-            lockfile);
-    return E_LOCK;
-  }
-  flock(fl, LOCK_EX);
 
   if ((ret = checkirange()))
     return ret;
@@ -632,7 +646,6 @@ int main(int argc, char *argv[])
   }
   else
     ret = err(E_INIT);
-  flock(fl, LOCK_UN);
 
   return ret;
 }
