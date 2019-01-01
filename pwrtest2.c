@@ -284,6 +284,7 @@ int main(int argc, char *argv[])
         time(&tt);
         strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt));
         printf("%s; %s", timebuf, buf);
+        fflush(stdout);
       }
     }
     while (ret < 0 && errno == EINTR);
@@ -293,6 +294,7 @@ int main(int argc, char *argv[])
   time(&tt);
   strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt));
   printf("%s; %s", timebuf, buf);
+  fflush(stdout);
 //  printresults();
   close(f);
   return 0;
