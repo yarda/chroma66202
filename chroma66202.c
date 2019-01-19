@@ -628,7 +628,8 @@ int main(int argc, char *argv[])
   int ret;
 
   // line buffering stdout
-  setvbuf(stdout, NULL, _IOLBF, 0);
+  //setvbuf(stdout, NULL, _IOLBF, 0);
+  setlinebuf(stdout);
   win = window;
   ret = parse_args(argc, argv);
   if (ret < 0)

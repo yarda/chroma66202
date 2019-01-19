@@ -156,13 +156,13 @@ void printresults(void)
   if (compact)
   {
     printf("%lu;%f;%g\n", tt - tts, p, p * (tt - tts));
-    fflush(stdout);
+//    fflush(stdout);
   }
   else
   {
     strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt));
     printf("%s; %f; %f; %f; %f; %f\n", timebuf, u, i, frq, p, pf);
-    fflush(stdout);
+//    fflush(stdout);
   }
 }
 
@@ -171,6 +171,9 @@ int main(int argc, char *argv[])
   int ret;
   struct timespec rem = {0};
 
+  // line buffering stdout
+  //setvbuf(stdout, NULL, _IOLBF, 0);
+  setlinebuf(stdout);
   compact = 0;
   time(&tts);
   if (argc < 1 || argc > 2)
@@ -206,7 +209,7 @@ int main(int argc, char *argv[])
   if (!compact)
   {
     printf("Time; U; I; P; PF\n");
-    fflush(stdout);
+//    fflush(stdout);
   }
 /*
   if (read(f, buf, BUFLEN - 1) < 0)
