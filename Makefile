@@ -13,10 +13,10 @@ CFLAGS=-Wall
 all: $(PRG) $(PRG2) $(PRG3)
 
 $(PRG): $(PRG).o
-	$(LD) $(LDFLAGS) -o $(PRG) $(PRG).o
+	$(CC) $(LDFLAGS) -o $(PRG) $(PRG).o
 
 $(PRG2): $(PRG2).o
-	$(LD) $(LDFLAGS) -o $(PRG2) $(PRG2).o
+	$(CC) $(LDFLAGS) -o $(PRG2) $(PRG2).o
 
 $(PRG3): $(PRG3).o
 	$(CC) -o $(PRG3) $(PRG3).o
