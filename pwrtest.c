@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
   time(&tts);
   if (argc < 1 || argc > 2)
   {
-    printf("usage: %s [-e]\n", argv[0]);
+    printf("usage: %s [-c]\n", argv[0]);
     printf("  -c  compact mode, show only the time, power and energy");
     return 0;
   }
