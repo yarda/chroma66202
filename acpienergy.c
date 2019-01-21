@@ -49,6 +49,7 @@
 #define BUFSIZE 1024
 
 int fcompact = 0;
+int ftest = 0;
 int flog = 0;
 volatile int ssigusr1 = 0;
 volatile int ssigterm = 0;
@@ -132,6 +133,8 @@ void help(char *argv[])
   printf("Usage: %s [OPTIONS]\n", argv[0]);
   printf("  -lLOG          Log all readings to the LOG.\n");
   printf("  -c             Compact mode, show only the time, power and ");
+  printf("  -t             Test mode, just check presence of the ACPI power ");
+  printf("meter and exits.\n");
   printf("energy.\n");
   printf("  --help, -h     Show this help.\n");
   printf("  --version, -v  Show version of this program.\n\n");
@@ -142,7 +145,7 @@ int parse_args(int argc, char *argv[])
   int opt, option_index;
 
   while ((opt =
-          getopt_long (argc, argv, "cl:hv", long_options,
+          getopt_long (argc, argv, "tcl:hv", long_options,
                        &option_index)) != -1)
   {
       switch (opt)
@@ -153,6 +156,9 @@ int parse_args(int argc, char *argv[])
         case 'v':
           version();
           return -1;
+        case 't':
+          ftest = 1;
+          break;
         case 'c':
           fcompact = 1;
           break;
@@ -320,6 +326,12 @@ int main(int argc, char *argv[])
   {
     fprintf(stderr, "Error: invalid averaging interval.\n");
     return 1;
+  }
+
+  if (ftest)
+  {
+    printf("ACPI power meter found and it seems OK.\n");
+    return EXIT_SUCCESS;
   }
 
   p = 0.0f;
