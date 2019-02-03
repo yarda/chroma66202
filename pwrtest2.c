@@ -160,7 +160,7 @@ void help(char *argv[])
   printf("GNU General Public License.\n\n");
   printf("Usage: %s [OPTIONS]\n", argv[0]);
   printf("  -lLOG          Log all readings to the LOG.\n");
-  printf("  -c             Compact mode, show only the time, power and ");
+  printf("  -c             Compact mode, show only the time, power and energy.\n");
   printf("  -t             Test mode, just check presence of the Chroma 66202 power ");
   printf("meter and exits.\n");
   printf("energy.\n");
