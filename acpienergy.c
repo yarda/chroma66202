@@ -126,7 +126,7 @@ void version (void)
 
 void help(char *argv[])
 {
-  printf("ACPI power meterfrontend.\n");
+  printf("ACPI power meter frontend.\n");
   printf("Version %s %s\n", VERSION_STRING, COPYRIGHT_STRING);
   printf("This program is distributed under the terms of the ");
   printf("GNU General Public License.\n\n");
