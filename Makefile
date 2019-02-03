@@ -1,6 +1,6 @@
 PRG=chroma66202
 PRG2=pwrtest
-PRG3=pwrtest2
+PRG3=pwrtest_energy
 PRG4=acpienergy
 PRG5=ipmienergy
 
