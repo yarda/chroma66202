@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
 //      ssigterm = 1;
     }
     rem.tv_sec = averaging_interval / 1000;
-    rem.tv_nsec = 0;
+    rem.tv_nsec = averaging_interval % 1000 * 1000;;
     do
     {
       ret = nanosleep(&rem, &rem);
