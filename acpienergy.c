@@ -371,5 +371,5 @@ int main(int argc, char *argv[])
   printresults();
   if (flog)
     fclose(file_log);
-  return 0;
+  return EXIT_SUCCESS;
 }
