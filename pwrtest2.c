@@ -70,12 +70,13 @@ command(f, buf))
 
 int fcompact = 0;
 int ftest = 0;
-int flog = 0;
 int f;
 int dummy;
 int repeat = DEFAULT_REPEAT;
 int delay = DEFAULT_DELAY;
 int tintegratei = 0;
+// in ms
+int averaging_interval = 1000;
 volatile int ssigusr1 = 0;
 volatile int ssigterm = 0;
 unsigned long long iters;
@@ -94,7 +95,6 @@ char buf[BUFLEN] = { 0 };
 char timebuf[BUFSIZE] = { 0 };
 char path_log[PATH_MAX] = { 0 };
 struct sigaction act = {{ 0 }};
-FILE *file_log;
 
 struct option long_options[] = {
   {"help", 0, 0, 'h'},
@@ -159,7 +159,6 @@ void help(char *argv[])
   printf("This program is distributed under the terms of the ");
   printf("GNU General Public License.\n\n");
   printf("Usage: %s [OPTIONS]\n", argv[0]);
-  printf("  -lLOG          Log all readings to the LOG.\n");
   printf("  -c             Compact mode, show only the time, power and energy.\n");
   printf("  -t             Test mode, just check presence of the Chroma 66202 power ");
   printf("meter and exits.\n");
@@ -173,7 +172,7 @@ int parse_args(int argc, char *argv[])
   int opt, option_index;
 
   while ((opt =
-          getopt_long (argc, argv, "tcl:hv", long_options,
+          getopt_long (argc, argv, "tchv", long_options,
                        &option_index)) != -1)
   {
       switch (opt)
@@ -189,10 +188,6 @@ int parse_args(int argc, char *argv[])
           break;
         case 'c':
           fcompact = 1;
-          break;
-        case 'l':
-          flog = 1;
-          strncpy(path_log, optarg, PATH_MAX);
           break;
         case ':':
           return err(E_MISSARG);
@@ -230,65 +225,6 @@ int response(int f, char *buffer, int buflen)
 {
   memset(buffer, 0, buflen);
   return read(f, buffer, buflen - 1) != -1;
-}
-
-void integr(void)
-{
-  double _u, _i, _frq, _p, _pf;
-
-  cleartrail(buf);
-  sscanf(strtok(buf, ";"), "%lf", &_u);
-  if (_u < 0.0f)
-    u = _u;
-  if (u >= 0.0f)
-    u += (_u - u) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &_i);
-  if (_i < 0.0f)
-    i = _i;
-  if (i >= 0.0f)
-    i += (_i - i) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &_frq);
-  if (_frq < 0.0f)
-    frq = _frq;
-  if (frq >= 0.0f)
-    frq += (_frq - frq) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &_p);
-  if (_p < 0.0f)
-    p = _p;
-  if (p >= 0.0f)
-    p += (_p - p) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &_pf);
-  if (_pf < 0.0f)
-    pf = _pf;
-  if (pf >= 0.0f)
-    pf += (_pf - pf) / iters;
-  if (flog)
-  {
-    if (!strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt)))
-      timebuf[0] = 0;
-    if (fcompact)
-      fprintf(file_log, "%ld; %f\n", tt - tts, _p);
-    else
-      fprintf(file_log, "%s; %ld; %f; %f; %f; %f; %f\n", timebuf, tt - tts,
-        _u, _i, _frq, _p, _pf);
-  }
-}
-
-void printresults(void)
-{
-  memset(timebuf, 0, BUFSIZE);
-  time(&tt);
-  if (fcompact)
-  {
-    printf("%lu;%f;%g\n", tt - tts, p, p * (tt - tts));
-//    fflush(stdout);
-  }
-  else
-  {
-    strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt));
-    printf("%s; %f; %f; %f; %f; %f\n", timebuf, u, i, frq, p, pf);
-//    fflush(stdout);
-  }
 }
 
 int main(int argc, char *argv[])
@@ -374,23 +310,10 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
   }
 
-  if (flog)
-  {
-    if ((file_log = fopen(path_log, "w")))
-      setlinebuf(file_log);
-    else
-    {
-      flog = 0;
-      fprintf(stderr, "Error: unable to create '%s'.\n", path_log);
-    }
-  }
-
   if (!fcompact)
   {
     printf("Time; E [Wh]\n");
 //    fflush(stdout);
-    if (flog)
-      fprintf(file_log, "Timestamp; Time [s]; U [V]; I [A]; f [Hz]; P [W]; pf [-]\n");
   }
   sleep(1);
 //  while (buf[0] == '-' && buf[1] == '1')
@@ -398,7 +321,6 @@ int main(int argc, char *argv[])
 //    sleep(1);
 //    dummy = cr("FETC? V,I,FREQ,W,PF\n");
 //  }
-//  integr();
   dummy = cr("MEAS:SCAL:POW:ENER?\n");
   while (!ssigterm)
   {
@@ -406,14 +328,13 @@ int main(int argc, char *argv[])
     if (iters)
     {
 //      dummy = cr("FETC? V,I,FREQ,W,PF\n");
-//      integr();
     }
     else
     {
 //      fprintf(stderr, "Error: overflow.\n");
 //      ssigterm = 1;
     }
-    rem.tv_sec = 1;
+    rem.tv_sec = averaging_interval / 1000;
     rem.tv_nsec = 0;
     do
     {
@@ -424,7 +345,6 @@ int main(int argc, char *argv[])
       if (ssigusr1)
       {
         ssigusr1 = 0;
-//        printresults();
         dummy = cr("FETC:SCAL:POW:ENER?\n");
         memset(timebuf, 0, BUFSIZE);
         time(&tt);
@@ -441,9 +361,6 @@ int main(int argc, char *argv[])
   strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt));
   printf("%s; %s", timebuf, buf);
 //  fflush(stdout);
-//  printresults();
-  if (flog)
-    fclose(file_log);
   close(f);
   return 0;
 }
