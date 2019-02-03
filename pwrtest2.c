@@ -234,39 +234,43 @@ int response(int f, char *buffer, int buflen)
 
 void integr(void)
 {
-  double g, pwr;
+  double _u, _i, _frq, _p, _pf;
 
   cleartrail(buf);
-  sscanf(strtok(buf, ";"), "%lf", &g);
-  if (g < 0.0f)
-    u = g;
+  sscanf(strtok(buf, ";"), "%lf", &_u);
+  if (_u < 0.0f)
+    u = _u;
   if (u >= 0.0f)
-    u += (g - u) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &g);
-  if (g < 0.0f)
-    i = g;
+    u += (_u - u) / iters;
+  sscanf(strtok(NULL, ";"), "%lf", &_i);
+  if (_i < 0.0f)
+    i = _i;
   if (i >= 0.0f)
-    i += (g - i) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &g);
-  if (g < 0.0f)
-    frq = g;
+    i += (_i - i) / iters;
+  sscanf(strtok(NULL, ";"), "%lf", &_frq);
+  if (_frq < 0.0f)
+    frq = _frq;
   if (frq >= 0.0f)
-    frq += (g - frq) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &pwr);
-  if (pwr < 0.0f)
-    p = pwr;
+    frq += (_frq - frq) / iters;
+  sscanf(strtok(NULL, ";"), "%lf", &_p);
+  if (_p < 0.0f)
+    p = _p;
   if (p >= 0.0f)
-    p += (pwr - p) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &g);
-  if (g < 0.0f)
-    pf = g;
+    p += (_p - p) / iters;
+  sscanf(strtok(NULL, ";"), "%lf", &_pf);
+  if (_pf < 0.0f)
+    pf = _pf;
   if (pf >= 0.0f)
-    pf += (g - pf) / iters;
+    pf += (_pf - pf) / iters;
   if (flog)
   {
     if (!strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt)))
       timebuf[0] = 0;
-    fprintf(file_log, "%s; %ld; %f\n", timebuf, tt - tts, pwr);
+    if (fcompact)
+      fprintf(file_log, "%ld; %f\n", tt - tts, _p);
+    else
+      fprintf(file_log, "%s; %ld; %f; %f; %f; %f; %f\n", timebuf, tt - tts,
+        _u, _i, _frq, _p, _pf);
   }
 }
 
@@ -324,11 +328,6 @@ int main(int argc, char *argv[])
   sigaction(SIGUSR2, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
   sigaction(SIGINT, &act, NULL);
-  if (!fcompact)
-  {
-    printf("Time; E [Wh]\n");
-//    fflush(stdout);
-  }
 /*
   if (read(f, buf, BUFLEN - 1) < 0)
   {
@@ -375,6 +374,24 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
   }
 
+  if (flog)
+  {
+    if ((file_log = fopen(path_log, "w")))
+      setlinebuf(file_log);
+    else
+    {
+      flog = 0;
+      fprintf(stderr, "Error: unable to create '%s'.\n", path_log);
+    }
+  }
+
+  if (!fcompact)
+  {
+    printf("Time; E [Wh]\n");
+//    fflush(stdout);
+    if (flog)
+      fprintf(file_log, "Timestamp; Time [s]; U [V]; I [A]; f [Hz]; P [W]; pf [-]\n");
+  }
   sleep(1);
 //  while (buf[0] == '-' && buf[1] == '1')
 //  {
