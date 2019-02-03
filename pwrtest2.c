@@ -21,10 +21,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 
 #define DEV "/dev/usbtmc0"
 #define IDN "*IDN?\n"
@@ -51,8 +53,25 @@ command(f, (arg))
   strncat(buf, "\n", BUFLEN - 1 - strlen(buf)), \
 command(f, buf))
 
+#define PROGNAME pwrtest2
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
+#define STRING(S) STR_HELPER(S)
+#define STR_HELPER(S) #S
+#define PROGNAME_STRING STRING(PROGNAME)
+#define VERSION_STRING STRING(VERSION_MAJOR) "." STRING(VERSION_MINOR)
+#define COPYRIGHT_STRING \
+"Copyright (C) 2010-2019 Yarda <jskarvad@redhat.com>"
+
+#define E_SUCCESS   0
+#define E_MISSARG   1
+#define E_UNKOPT    2
+#define E_WRONGARG  3
+
+int fcompact = 0;
+int ftest = 0;
+int flog = 0;
 int f;
-int compact;
 int dummy;
 int repeat = DEFAULT_REPEAT;
 int delay = DEFAULT_DELAY;
@@ -71,9 +90,17 @@ char irange[5] = "A8";
 char urange[5] = "AUTO";
 char window[6] = DEFAULT_WINDOW;
 char tintegrate[] = "1";
-char buf[BUFLEN] = {0};
-char timebuf[BUFSIZE] = {0};
-struct sigaction act = {{0}};
+char buf[BUFLEN] = { 0 };
+char timebuf[BUFSIZE] = { 0 };
+char path_log[PATH_MAX] = { 0 };
+struct sigaction act = {{ 0 }};
+FILE *file_log;
+
+struct option long_options[] = {
+  {"help", 0, 0, 'h'},
+  {"version", 0, 0, 'v'},
+  {0, 0, 0, 0}
+};
 
 void sig_handler(int sig)
 {
@@ -87,6 +114,96 @@ void sig_handler(int sig)
     case SIGTERM:
       ssigterm = 1;
   }
+}
+
+int err(int code)
+{
+  char *str;
+
+  switch(code)
+  {
+    case E_SUCCESS:
+      str = "No error.";
+      break;
+    case E_MISSARG:
+      str = "Missing argument.";
+      break;
+    case E_UNKOPT:
+      str = "Unknown option.";
+      break;
+    case E_WRONGARG:
+      str = "Wrong argument.";
+      break;
+   default:
+      str = "Unknown error.";
+  }
+  fprintf(stderr, "%s\n", str);
+  return code;
+}
+
+void version (void)
+{
+  printf("%s v%s\n", PROGNAME_STRING, VERSION_STRING);
+  printf("%s\n", COPYRIGHT_STRING);
+  printf("License GPLv3+: GNU GPL version 3 or later ");
+  printf("<http://gnu.org/licenses/gpl.html>\n");
+  printf("This is free software: ");
+  printf("you are free to change and redistribute it.\n");
+  printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
+}
+
+void help(char *argv[])
+{
+  printf("Chroma 66202 power meter frontend.\n");
+  printf("Version %s %s\n", VERSION_STRING, COPYRIGHT_STRING);
+  printf("This program is distributed under the terms of the ");
+  printf("GNU General Public License.\n\n");
+  printf("Usage: %s [OPTIONS]\n", argv[0]);
+  printf("  -lLOG          Log all readings to the LOG.\n");
+  printf("  -c             Compact mode, show only the time, power and ");
+  printf("  -t             Test mode, just check presence of the Chroma 66202 power ");
+  printf("meter and exits.\n");
+  printf("energy.\n");
+  printf("  --help, -h     Show this help.\n");
+  printf("  --version, -v  Show version of this program.\n\n");
+}
+
+int parse_args(int argc, char *argv[])
+{
+  int opt, option_index;
+
+  while ((opt =
+          getopt_long (argc, argv, "tcl:hv", long_options,
+                       &option_index)) != -1)
+  {
+      switch (opt)
+      {
+        case 'h':
+          help(argv);
+          return -1;
+        case 'v':
+          version();
+          return -1;
+        case 't':
+          ftest = 1;
+          break;
+        case 'c':
+          fcompact = 1;
+          break;
+        case 'l':
+          flog = 1;
+          strncpy(path_log, optarg, PATH_MAX);
+          break;
+        case ':':
+          return err(E_MISSARG);
+        default:
+          return err(E_UNKOPT);
+      }
+   }
+  if (optind < argc)
+    return err(E_WRONGARG);
+
+  return E_SUCCESS;
 }
 
 void cleartrail(char *buf)
@@ -117,7 +234,7 @@ int response(int f, char *buffer, int buflen)
 
 void integr(void)
 {
-  double g;
+  double g, pwr;
 
   cleartrail(buf);
   sscanf(strtok(buf, ";"), "%lf", &g);
@@ -135,23 +252,29 @@ void integr(void)
     frq = g;
   if (frq >= 0.0f)
     frq += (g - frq) / iters;
-  sscanf(strtok(NULL, ";"), "%lf", &g);
-  if (g < 0.0f)
-    p = g;
+  sscanf(strtok(NULL, ";"), "%lf", &pwr);
+  if (pwr < 0.0f)
+    p = pwr;
   if (p >= 0.0f)
-    p += (g - p) / iters;
+    p += (pwr - p) / iters;
   sscanf(strtok(NULL, ";"), "%lf", &g);
   if (g < 0.0f)
     pf = g;
   if (pf >= 0.0f)
     pf += (g - pf) / iters;
+  if (flog)
+  {
+    if (!strftime(timebuf, BUFSIZE, "%Y-%m-%d %H:%M:%S %Z", localtime(&tt)))
+      timebuf[0] = 0;
+    fprintf(file_log, "%s; %ld; %f\n", timebuf, tt - tts, pwr);
+  }
 }
 
 void printresults(void)
 {
   memset(timebuf, 0, BUFSIZE);
   time(&tt);
-  if (compact)
+  if (fcompact)
   {
     printf("%lu;%f;%g\n", tt - tts, p, p * (tt - tts));
 //    fflush(stdout);
@@ -172,25 +295,21 @@ int main(int argc, char *argv[])
   // line buffering stdout
   //setvbuf(stdout, NULL, _IOLBF, 0);
   setlinebuf(stdout);
-  compact = 0;
+  fcompact = 0;
   time(&tts);
-  if (argc < 1 || argc > 2)
-  {
-    printf("usage: %s [-c]\n", argv[0]);
-    printf("  -c  compact mode, show only the time, power and energy");
-    return 0;
-  }
 
-  if (argc == 2 && strcmp(argv[1], "-c") == 0)
-  {
-    compact = 1;
-  }
+  ret = parse_args(argc, argv);
+  if (ret < 0)
+    return EXIT_SUCCESS;
+  if (ret > 0)
+    return ret;
 
   if ((f = open(DEV, O_RDWR)) < 0)
   {
     fprintf(stderr, "Error opening device: %s\n", DEV);
     return 1;
   }
+
   memset(buf, 0, BUFLEN);
   u = 0.0f;
   i = 0.0f;
@@ -205,7 +324,7 @@ int main(int argc, char *argv[])
   sigaction(SIGUSR2, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
   sigaction(SIGINT, &act, NULL);
-  if (!compact)
+  if (!fcompact)
   {
     printf("Time; E [Wh]\n");
 //    fflush(stdout);
@@ -248,6 +367,14 @@ int main(int argc, char *argv[])
   {
     fprintf(stderr, "Error reading device.\n");
   }
+
+  if (ftest)
+  {
+    close(f);
+    printf("Chroma 66202 power meter found and it seems OK.\n");
+    return EXIT_SUCCESS;
+  }
+
   sleep(1);
 //  while (buf[0] == '-' && buf[1] == '1')
 //  {
@@ -298,6 +425,8 @@ int main(int argc, char *argv[])
   printf("%s; %s", timebuf, buf);
 //  fflush(stdout);
 //  printresults();
+  if (flog)
+    fclose(file_log);
   close(f);
   return 0;
 }
