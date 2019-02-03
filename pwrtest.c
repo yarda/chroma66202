@@ -73,9 +73,6 @@ char window[6] = DEFAULT_WINDOW;
 char tintegrate[] = "1";
 char buf[BUFLEN] = {0};
 char timebuf[BUFSIZE] = {0};
-struct sigaction acts_sigusr1 = {{0}};
-struct sigaction acts_sigusr2 = {{0}};
-struct sigaction acts_term = {{0}};
 struct sigaction act = {{0}};
 
 void sig_handler(int sig)
@@ -85,6 +82,7 @@ void sig_handler(int sig)
     case SIGUSR1:
       ssigusr1 = 1;
       break;
+    case SIGINT:
     case SIGUSR2:
     case SIGTERM:
       ssigterm = 1;
@@ -206,6 +204,7 @@ int main(int argc, char *argv[])
   sigaction(SIGUSR1, &act, NULL);
   sigaction(SIGUSR2, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
+  sigaction(SIGINT, &act, NULL);
   if (!compact)
   {
     printf("Time; U; I; P; PF\n");

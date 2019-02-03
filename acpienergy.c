@@ -63,9 +63,6 @@ char mpath[PATH_MAX] = { 0 };
 char path_log[PATH_MAX] = { 0 };
 // in ms
 int averaging_interval = 0;
-struct sigaction acts_sigusr1 = {{0}};
-struct sigaction acts_sigusr2 = {{0}};
-struct sigaction acts_term = {{0}};
 struct sigaction act = {{0}};
 FILE *file_log;
 
@@ -82,6 +79,7 @@ void sig_handler(int sig)
     case SIGUSR1:
       ssigusr1 = 1;
       break;
+    case SIGINT:
     case SIGUSR2:
     case SIGTERM:
       ssigterm = 1;
@@ -342,6 +340,7 @@ int main(int argc, char *argv[])
   sigaction(SIGUSR1, &act, NULL);
   sigaction(SIGUSR2, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
+  sigaction(SIGINT, &act, NULL);
   if (!fcompact)
   {
     printf("Time; P [W]; E [Wh]\n");
