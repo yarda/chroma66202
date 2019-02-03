@@ -303,16 +303,6 @@ int main(int argc, char *argv[])
   // line buffering stdout
   //setvbuf(stdout, NULL, _IOLBF, 0);
   setlinebuf(stdout);
-  if (flog)
-  {
-    if ((file_log = fopen(path_log, "w")))
-      setlinebuf(file_log);
-    else
-    {
-      flog = 0;
-      fprintf(stderr, "Error: unable to create '%s'.\n", path_log);
-    }
-  }
 
   if (!find_acpi_power_meter())
   {
@@ -332,6 +322,16 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
   }
 
+  if (flog)
+  {
+    if ((file_log = fopen(path_log, "w")))
+      setlinebuf(file_log);
+    else
+    {
+      flog = 0;
+      fprintf(stderr, "Error: unable to create '%s'.\n", path_log);
+    }
+  }
   p = 0.0f;
   iters = 0;
   ssigusr1 = 0;

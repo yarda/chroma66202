@@ -268,17 +268,6 @@ int main(int argc, char *argv[])
   // line buffering stdout
   //setvbuf(stdout, NULL, _IOLBF, 0);
   setlinebuf(stdout);
-  if (flog)
-  {
-    if ((file_log = fopen(path_log, "w")))
-      setlinebuf(file_log);
-    else
-    {
-      flog = 0;
-      fprintf(stderr, "Error: unable to create '%s'.\n", path_log);
-    }
-  }
-
   ipmi.opened = 0;
   if (!open_ipmi_power_meter())
   {
@@ -299,6 +288,17 @@ int main(int argc, char *argv[])
     close_ipmi_power_meter();
     printf("IPMI power meter found and it seems OK.\n");
     return EXIT_SUCCESS;
+  }
+
+  if (flog)
+  {
+    if ((file_log = fopen(path_log, "w")))
+      setlinebuf(file_log);
+    else
+    {
+      flog = 0;
+      fprintf(stderr, "Error: unable to create '%s'.\n", path_log);
+    }
   }
 
   p = 0.0f;
